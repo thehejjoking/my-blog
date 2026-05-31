@@ -2,7 +2,8 @@ backend:
   name: github
   repo: thehejjoking/my-blog
   branch: main
-  auth_scope: repo
+  base_url: https://decap-proxy.aaron-senese2010.workers.dev/callback
+  auth_endpoint: auth
 
 media_folder: "public/images"
 public_folder: "/images"
