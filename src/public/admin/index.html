@@ -98,14 +98,15 @@ function login() {
     'width=600,height=700'
   );
   window.addEventListener('message', function handler(e) {
-    if (e.data && e.data.token) {
-      token = e.data.token;
-      localStorage.setItem('gh_token', token);
-      window.removeEventListener('message', handler);
-      popup.close();
-      initAdmin();
-    }
-  });
+  console.log('message received:', e.data);
+  if (e.data && e.data.token) {
+    token = e.data.token;
+    localStorage.setItem('gh_token', token);
+    window.removeEventListener('message', handler);
+    popup.close();
+    initAdmin();
+  }
+});
 }
 
 function logout() {
