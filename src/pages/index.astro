@@ -5,18 +5,25 @@ const posts = await getCollection('blog');
 
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Aaron's Place</title>
-  </head>
-  <body>
-    <h1>5/30/26 11:01 PM</h1>
-    <p>Hello World</p>
-
-    <h2>Posts</h2>
-    {posts.map((post) => (
-      <div>
-        <a href={`/posts/${post.id}`}>{post.data.title}</a>
-      </div>
-    ))}
-  </body>
+<head>
+  <title>aaronsenese.com</title>
+</head>
+<body>
+  <h1>aaronsenese.com</h1>
+  <hr>
+  <ul>
+    <li><a href="/posts">Posts</a></li>
+  </ul>
+  <hr>
+  <h2>Recent Posts</h2>
+  {posts.length === 0 ? (
+    <p>No posts yet.</p>
+  ) : (
+    <ul>
+      {posts.map((post) => (
+        <li><a href={`/posts/${post.id}`}>{post.data.title}</a></li>
+      ))}
+    </ul>
+  )}
+</body>
 </html>
