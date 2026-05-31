@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Admin -- Aaron's Place</title>
+</head>
+<body>
+<h1>Aaron's Place -- Admin</h1>
+<hr>
+
+<div id="auth-section">
+  <p>You are not logged in.</p>
+  <button onclick="login()">Login with GitHub</button>
+</div>
+
+<div id="admin-section" style="display:none">
+  <p>Logged in as <strong id="username-display"></strong> | <a href="#" onclick="logout()">Logout</a></p>
+  <hr>
+
+  <h2>Posts</h2>
+  <button onclick="showSection('new-post-section')">+ New Post</button>
+  <button onclick="loadPosts()">Refresh Posts</button>
+  <br><br>
+  <div id="posts-list">Loading posts...</div>
+
+  <hr>
+
+  <div id="new-post-section" style="display:none">
+    <h2>New Post</h2>
+    <form onsubmit="createPost(event)">
+      <p>
+        <label>Title:<br>
+        <input type="text" id="new-title" size="60" required></label>
+      </p>
+      <p>
+        <label>Body (Markdown):<br>
+        <textarea id="new-body" rows="20" cols="80"></textarea></label>
+      </p>
+      <p>
+        <input type="submit" value="Publish Post">
+        <button type="button" onclick="hideSection('new-post-section')">Cancel</button>
+      </p>
+    </form>
+  </div>
+
+  <div id="edit-post-section" style="display:none">
+    <h2>Edit Post</h2>
+    <form onsubmit="savePost(event)">
+      <input type="hidden" id="edit-path">
+      <input type="hidden" id="edit-sha">
+      <p>
+        <label>Title:<br>
+        <input type="text" id="edit-title" size="60" required></label>
+      </p>
+      <p>
+        <label>Body (Markdown):<br>
+        <textarea id="edit-body" rows="20" cols="80"></textarea></label>
+      </p>
+      <p>
+        <input type="submit" value="Save Post">
+        <button type="button" onclick="hideSection('edit-post-section')">Cancel</button>
+      </p>
+    </form>
+  </div>
+
+  <div id="upload-section">
+    <h2>Upload Image</h2>
+    <form onsubmit="uploadImage(event)">
+      <p>
+        <label>Image file:<br>
+        <input type="file" id="image-file" accept="image/*" required></label>
+      </p>
+      <p>
+        <input type="submit" value="Upload Image">
+      </p>
+    </form>
+    <div id="upload-result"></div>
+  </div>
+
+  <div id="status-msg" style="color:green"></div>
+</div>
+
+<script>
+const REPO = 'thehejjoking/my-blog';
+const BRANCH = 'main';
+const OAUTH_BASE = 'https://decap-proxy.aaron-senese2010.workers.dev';
+const POSTS_PATH = 'src/content/blog';
+const IMAGES_PATH = 'public/images';
+
+let token = localStorage.getItem('gh_token') || null;
+
+function login() {
+  const state = Math.random().toString(36).slice(2);
+  localStorage.setItem('oauth_state', state);
+  const popup = window.open(
+    `${OAUTH_BASE}/auth?provider=github&state=${state}`,
+    'github-oauth',
+    'width=600,height=700'
+  );
+  window.addEventListener('message', function handler(e) {
+    if (e.data && e.data.token) {
+      token = e.data.token;
+      localStorage.setItem('gh_token', token);
+      window.removeEventListener('message', handler);
+      popup.close();
+      initAdmin();
+    }
+  });
+}
+
+function logout() {
+  token = null;
+  localStorage.removeItem('gh_token');
+  document.getElementById('auth-section').style.display = '';
+  document.getElementById('admin-section').style.display = 'none';
+}
+
+async function initAdmin() {
+  const res = await fetch('https://api.github.com/user', {
+    headers: { Authorization: `token ${token}` }
+  });
+  if (!res.ok) { logout(); return; }
+  const user = await res.json();
+  document.getElementById('username-display').textContent = user.login;
+  document.getElementById('auth-section').style.display = 'none';
+  document.getElementById('admin-section').style.display = '';
+  loadPosts();
+}
+
+async function loadPosts() {
+  document.getElementById('posts-list').innerHTML = 'Loading...';
+  const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${POSTS_PATH}?ref=${BRANCH}`, {
+    headers: { Authorization: `token ${token}` }
+  });
+  if (!res.ok) { document.getElementById('posts-list').innerHTML = 'Error loading posts.'; return; }
+  const files = await res.json();
+  const mds = files.filter(f => f.name.endsWith('.md'));
+  if (mds.length === 0) { document.getElementById('posts-list').innerHTML = 'No posts yet.'; return; }
+  let html = '<ul>';
+  for (const f of mds) {
+    html += `<li>${f.name} &nbsp; <a href="#" onclick="editPost('${f.path}','${f.sha}');return false">Edit</a> | <a href="#" onclick="deletePost('${f.path}','${f.sha}');return false">Delete</a></li>`;
+  }
+  html += '</ul>';
+  document.getElementById('posts-list').innerHTML = html;
+}
+
+function slugify(title) {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+async function createPost(e) {
+  e.preventDefault();
+  const title = document.getElementById('new-title').value.trim();
+  const body = document.getElementById('new-body').value;
+  const slug = slugify(title);
+  const date = new Date().toISOString().slice(0,10);
+  const filename = `${date}-${slug}.md`;
+  const content = `---\ntitle: ${title}\n---\n${body}`;
+  const encoded = btoa(unescape(encodeURIComponent(content)));
+  const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${POSTS_PATH}/${filename}`, {
+    method: 'PUT',
+    headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: `Add post: ${title}`, content: encoded, branch: BRANCH })
+  });
+  if (res.ok) {
+    setStatus('Post published!');
+    document.getElementById('new-title').value = '';
+    document.getElementById('new-body').value = '';
+    hideSection('new-post-section');
+    loadPosts();
+  } else {
+    setStatus('Error publishing post.', true);
+  }
+}
+
+async function editPost(path, sha) {
+  const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}?ref=${BRANCH}`, {
+    headers: { Authorization: `token ${token}` }
+  });
+  const file = await res.json();
+  const raw = decodeURIComponent(escape(atob(file.content.replace(/\n/g, ''))));
+  const titleMatch = raw.match(/^---\ntitle: (.+)\n---\n?/);
+  const title = titleMatch ? titleMatch[1] : '';
+  const body = titleMatch ? raw.replace(titleMatch[0], '') : raw;
+  document.getElementById('edit-path').value = path;
+  document.getElementById('edit-sha').value = file.sha;
+  document.getElementById('edit-title').value = title;
+  document.getElementById('edit-body').value = body;
+  hideSection('new-post-section');
+  showSection('edit-post-section');
+}
+
+async function savePost(e) {
+  e.preventDefault();
+  const path = document.getElementById('edit-path').value;
+  const sha = document.getElementById('edit-sha').value;
+  const title = document.getElementById('edit-title').value.trim();
+  const body = document.getElementById('edit-body').value;
+  const content = `---\ntitle: ${title}\n---\n${body}`;
+  const encoded = btoa(unescape(encodeURIComponent(content)));
+  const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, {
+    method: 'PUT',
+    headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: `Update post: ${title}`, content: encoded, sha, branch: BRANCH })
+  });
+  if (res.ok) {
+    setStatus('Post saved!');
+    hideSection('edit-post-section');
+    loadPosts();
+  } else {
+    setStatus('Error saving post.', true);
+  }
+}
+
+async function deletePost(path, sha) {
+  if (!confirm('Delete this post?')) return;
+  const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, {
+    method: 'DELETE',
+    headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: `Delete post`, sha, branch: BRANCH })
+  });
+  if (res.ok) { setStatus('Post deleted!'); loadPosts(); }
+  else setStatus('Error deleting post.', true);
+}
+
+async function uploadImage(e) {
+  e.preventDefault();
+  const file = document.getElementById('image-file').files[0];
+  const reader = new FileReader();
+  reader.onload = async function() {
+    const base64 = reader.result.split(',')[1];
+    const filename = file.name;
+    const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${IMAGES_PATH}/${filename}`, {
+      method: 'PUT',
+      headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: `Upload image: ${filename}`, content: base64, branch: BRANCH })
+    });
+    if (res.ok) {
+      document.getElementById('upload-result').innerHTML = `Uploaded! URL: <code>/images/${filename}</code>`;
+      setStatus('Image uploaded!');
+    } else {
+      setStatus('Error uploading image.', true);
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function showSection(id) { document.getElementById(id).style.display = ''; }
+function hideSection(id) { document.getElementById(id).style.display = 'none'; }
+function setStatus(msg, err) {
+  const el = document.getElementById('status-msg');
+  el.style.color = err ? 'red' : 'green';
+  el.textContent = msg;
+  setTimeout(() => el.textContent = '', 4000);
+}
+
+if (token) initAdmin();
+</script>
+</body>
+</html>
