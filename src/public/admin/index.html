@@ -92,7 +92,31 @@ let token = localStorage.getItem('gh_token') || null;
 function login() {
   const state = Math.random().toString(36).slice(2);
   localStorage.setItem('oauth_state', state);
-  window.location.href = `${OAUTH_BASE}/auth?provider=github&scope=repo,user&state=${state}&site_id=aaronsenese.com`;
+  const popup = window.open(
+    `${OAUTH_BASE}/auth?provider=github&scope=repo,user&state=${state}`,
+    'github-oauth',
+    'width=600,height=700'
+  );
+  const interval = setInterval(() => {
+    if (popup.closed) {
+      clearInterval(interval);
+      if (localStorage.getItem('gh_token')) initAdmin();
+    }
+  }, 500);
+  window.addEventListener('message', function handler(e) {
+    if (e.origin !== OAUTH_BASE) return;
+    console.log('message received:', JSON.stringify(e.data));
+    clearInterval(interval);
+    window.removeEventListener('message', handler);
+    const data = typeof e.data === 'string' ? e.data : JSON.stringify(e.data);
+    const match = data.match(/token ([a-zA-Z0-9_]+)/);
+    if (match) {
+      token = match[1];
+      localStorage.setItem('gh_token', token);
+      popup.close();
+      initAdmin();
+    }
+  });
 }
 
 function logout() {
@@ -242,12 +266,8 @@ function setStatus(msg, err) {
 }
 
 const params = new URLSearchParams(window.location.search);
-if (params.get('token')) {
-  token = params.get('token');
-  localStorage.setItem('gh_token', token);
-  window.history.replaceState({}, '', '/admin/');
-  initAdmin();
-} else if (token) {
+if (token) initAdmin();
+ else if (token) {
   initAdmin();
 }
 </script>
