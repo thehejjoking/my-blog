@@ -3,6 +3,7 @@ backend:
   repo: thehejjoking/my-blog
   branch: main
   auth_scope: repo
+  base_url: https://api.github.com
   client_id: Ov23lizz4TxjTdzPOmMk
   client_secret: bedc3f404f0f3ef2b326b6f7160916eb065f10e0
 
