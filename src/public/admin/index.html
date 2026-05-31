@@ -97,10 +97,10 @@ function login() {
     'github-oauth',
     'width=600,height=700'
   );
-  window.addEventListener('message', function handler(e) {
+ window.addEventListener('message', function handler(e) {
   console.log('message received:', e.data);
-  if (e.data && e.data.token) {
-    token = e.data.token;
+  if (e.data && e.data.authorization) {
+    token = e.data.authorization.split(' ')[1];
     localStorage.setItem('gh_token', token);
     window.removeEventListener('message', handler);
     popup.close();
