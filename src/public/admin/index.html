@@ -80,7 +80,7 @@
   <div id="status-msg" style="color:green"></div>
 </div>
 
-<script is:inline>
+<script>
 const REPO = 'thehejjoking/my-blog';
 const BRANCH = 'main';
 const OAUTH_BASE = 'https://decap-proxy.aaron-senese2010.workers.dev';
@@ -92,33 +92,7 @@ let token = localStorage.getItem('gh_token') || null;
 function login() {
   const state = Math.random().toString(36).slice(2);
   localStorage.setItem('oauth_state', state);
-  const popup = window.open(
-    `${OAUTH_BASE}/auth?provider=github&state=${state}`,
-    'github-oauth',
-    'width=600,height=700'
-  );
-function login() {
-  const state = Math.random().toString(36).slice(2);
-  localStorage.setItem('oauth_state', state);
-  const popup = window.open(
-    `${OAUTH_BASE}/auth?provider=github&scope=repo,user&state=${state}`,
-    'github-oauth',
-    'width=600,height=700'
-  );
-  window.addEventListener('message', function handler(e) {
-    console.log('message received:', e.data);
-    if (!e.data) return;
-    const data = typeof e.data === 'string' ? e.data : JSON.stringify(e.data);
-    const match = data.match(/token ([a-zA-Z0-9_]+)/);
-    if (match) {
-      token = match[1];
-      localStorage.setItem('gh_token', token);
-      window.removeEventListener('message', handler);
-      if (popup && !popup.closed) popup.close();
-      initAdmin();
-    }
-  });
-}
+  window.location.href = `${OAUTH_BASE}/auth?provider=github&scope=repo,user&state=${state}&site_id=aaronsenese.com`;
 }
 
 function logout() {
@@ -267,7 +241,15 @@ function setStatus(msg, err) {
   setTimeout(() => el.textContent = '', 4000);
 }
 
-if (token) initAdmin();
+const params = new URLSearchParams(window.location.search);
+if (params.get('token')) {
+  token = params.get('token');
+  localStorage.setItem('gh_token', token);
+  window.history.replaceState({}, '', '/admin/');
+  initAdmin();
+} else if (token) {
+  initAdmin();
+}
 </script>
 </body>
 </html>
