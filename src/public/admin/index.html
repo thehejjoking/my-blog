@@ -9,8 +9,9 @@
 <hr>
 
 <div id="auth-section">
-  <p>You are not logged in.</p>
-  <button onclick="login()">Login with GitHub</button>
+  <p>Enter your GitHub Personal Access Token to login:</p>
+  <input type="password" id="token-input" size="60" placeholder="ghp_...">
+  <button onclick="loginWithToken()">Login</button>
 </div>
 
 <div id="admin-section" style="display:none">
@@ -83,40 +84,21 @@
 <script>
 const REPO = 'thehejjoking/my-blog';
 const BRANCH = 'main';
-const OAUTH_BASE = 'https://decap-proxy.aaron-senese2010.workers.dev';
 const POSTS_PATH = 'src/content/blog';
 const IMAGES_PATH = 'public/images';
 
 let token = localStorage.getItem('gh_token') || null;
 
-function login() {
-  const state = Math.random().toString(36).slice(2);
-  localStorage.setItem('oauth_state', state);
-  const popup = window.open(
-    `${OAUTH_BASE}/auth?provider=github&scope=repo,user&state=${state}`,
-    'github-oauth',
-    'width=600,height=700'
-  );
-  const interval = setInterval(() => {
-    if (popup.closed) {
-      clearInterval(interval);
-      if (localStorage.getItem('gh_token')) initAdmin();
-    }
-  }, 500);
-  window.addEventListener('message', function handler(e) {
-    if (e.origin !== OAUTH_BASE) return;
-    console.log('message received:', JSON.stringify(e.data));
-    clearInterval(interval);
-    window.removeEventListener('message', handler);
-    const data = typeof e.data === 'string' ? e.data : JSON.stringify(e.data);
-    const match = data.match(/token ([a-zA-Z0-9_]+)/);
-    if (match) {
-      token = match[1];
-      localStorage.setItem('gh_token', token);
-      popup.close();
-      initAdmin();
-    }
+async function loginWithToken() {
+  const input = document.getElementById('token-input').value.trim();
+  if (!input) return;
+  const res = await fetch('https://api.github.com/user', {
+    headers: { Authorization: `token ${input}` }
   });
+  if (!res.ok) { alert('Invalid token. Please try again.'); return; }
+  token = input;
+  localStorage.setItem('gh_token', token);
+  initAdmin();
 }
 
 function logout() {
@@ -228,7 +210,7 @@ async function deletePost(path, sha) {
   const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, {
     method: 'DELETE',
     headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: `Delete post`, sha, branch: BRANCH })
+    body: JSON.stringify({ message: 'Delete post', sha, branch: BRANCH })
   });
   if (res.ok) { setStatus('Post deleted!'); loadPosts(); }
   else setStatus('Error deleting post.', true);
@@ -265,11 +247,7 @@ function setStatus(msg, err) {
   setTimeout(() => el.textContent = '', 4000);
 }
 
-const params = new URLSearchParams(window.location.search);
 if (token) initAdmin();
- else if (token) {
-  initAdmin();
-}
 </script>
 </body>
 </html>
