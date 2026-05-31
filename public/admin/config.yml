@@ -2,16 +2,14 @@ backend:
   name: github
   repo: thehejjoking/my-blog
   branch: main
-  base_url: https://decap-proxy.aaron-senese2010.workers.dev/
+  base_url: https://decap-proxy.aaron-senese2010.workers.dev
   auth_endpoint: auth
-
 media_folder: "public/images"
 public_folder: "/images"
-
 collections:
   - name: "posts"
     label: "Posts"
-    folder: "src/pages/posts"
+    folder: "src/content/blog"
     create: true
     slug: "{{slug}}"
     fields:
