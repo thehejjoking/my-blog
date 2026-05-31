@@ -2,7 +2,7 @@ backend:
   name: github
   repo: thehejjoking/my-blog
   branch: main
-  base_url: https://decap-proxy.aaron-senese2010.workers.dev/callback
+  base_url: https://decap-proxy.aaron-senese2010.workers.dev/
   auth_endpoint: auth
 
 media_folder: "public/images"
