@@ -1,4 +1,27 @@
-<ul>
-  <li><a href="/about">About</a></li>
-  <li><a href="/posts">Posts</a></li>
-</ul>
+---
+import { getCollection } from 'astro:content';
+const posts = await getCollection('blog');
+---
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Posts -- Aaron's Place</title>
+</head>
+<body>
+  <a href="/">← Home</a>
+  <h1>Posts</h1>
+  <hr>
+  {posts.length === 0 ? (
+    <p>No posts yet.</p>
+  ) : (
+    <ul>
+      {posts.map((post) => (
+        <li><a href={`/posts/${post.id}`}>{post.data.title}</a></li>
+      ))}
+    </ul>
+  )}
+  <hr>
+  <a href="/">← Home</a>
+</body>
+</html>
