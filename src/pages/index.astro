@@ -1,27 +1,17 @@
 ---
-import { getCollection } from 'astro:content';
-const posts = await getCollection('blog');
 ---
 
 <!DOCTYPE html>
 <html>
 <head>
-  <title>aaronsenese.com</title>
+  <title>Aaron's Place</title>
 </head>
 <body>
-  <h1>aaronsenese.com</h1>
+  <h1>Aaron's Place</h1>
   <hr>
   <ul>
+    <li><a href="/about">About</a></li>
     <li><a href="/posts">Posts</a></li>
   </ul>
-  <hr>
-  <h2>Recent Posts</h2>
-  {posts.length === 0 ? (
-    <p>No posts yet.</p>
-  ) : (
-    <ul>
-  <li><a href="/about">About</a></li>
-</ul>
-  )}
 </body>
 </html>
